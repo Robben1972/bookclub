@@ -349,8 +349,12 @@
         "finished": [
             "Surrounded by idiots",
             "Ikki eshik orasi",
-            "Something"
+            "Something",
+            "something"
         ],
-        "book": []
+        "book": [
+            "dont",
+            "something"
+        ]
     }
 }

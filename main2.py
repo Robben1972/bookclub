@@ -2,7 +2,7 @@ import json
 import asyncio
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -64,21 +64,17 @@ async def ignore_group_messages(message: types.Message):
 
 @dp.message_handler(commands=["start"])
 async def start_handler(message: types.Message):
-    user_id = str(message.from_user.id)  # Get the user's ID as a string
+    user_id = str(message.from_user.id)
 
-    # Load users.json and left.json
     users = load_json(USERS_FILE)
     left_users = load_json(LEFT_FILE)
 
-    # Check if the user exists in left.json
     if user_id in left_users:
-        # Move user data from left.json to users.json
         users[user_id] = left_users.pop(user_id)
         save_json(USERS_FILE, users)
         save_json2(LEFT_FILE, left_users)
         msg = "Welcome back to the Book Club Bot! Your data has been restored."
     else:
-        # Create a new user if not found in left.json or users.json
         if user_id not in users:
             users[user_id] = {
                 "read_pages": 0,
@@ -100,7 +96,8 @@ async def start_handler(message: types.Message):
         keyboard.add(
             KeyboardButton("📅 Daily Statistics"),
             KeyboardButton("📈 Weekly Statistics"),
-            KeyboardButton("👥 User Statistics")
+            KeyboardButton("👥 User Statistics"),
+            KeyboardButton("Delete User")
         )
 
     # Respond to the user
@@ -207,11 +204,9 @@ async def finished_handler(message: types.Message, state: FSMContext):
         daily[user_id]["read_pages"] += read_pages
     save_json(DAILY_FILE, daily)
     
-    # Set user_name and book_name if missing
     data['user_name'] = data.get("user_name", users[user_id]['user_name'])
     data['book_name'] = data.get("book_name", "Unknown Book")
     
-    # Prepare message for confirmation
     confirmation_text = (
         f"👤 Reader name: {data['user_name']}\n"
         f"📚 Book name: {data['book_name']}\n"
@@ -228,6 +223,7 @@ async def finished_handler(message: types.Message, state: FSMContext):
     keyboard.add(KeyboardButton("✅ Yes"), KeyboardButton("❌ No"))
     
     await message.answer(confirmation_text, reply_markup=keyboard)
+    await state.update_data(finished=message.text)
     await ReadingState.confirmation.set()
 
 
@@ -248,14 +244,12 @@ async def confirmation_handler(message: types.Message, state: FSMContext):
             f"💣 To Page: {data['to_page']}\n"
             f"💣 Overall: {data['to_page'] - data['from_page']}\n"
             f"📅 {datetime.now().strftime('%d.%m.%Y')}\n"
-            f"Finished: {data.get('finished', '❌ No')}\n"
+            f"Finished: {data['finished']}\n"
             f"📩 @Di_Baudelaire\n"
             f"#challange"
         )
         await bot.send_message(GROUP_ID, text)
-
-        # Update user data if the book is finished
-        if{data.get('finished', '❌ No')} != '❌ No':
+        if data['finished'] != '❌ No':
             users[user_id]["finished"].append(data['book_name'])
             if data['book_name'] in users[user_id]["book"]:
                 users[user_id]["book"].remove(data['book_name'])
@@ -266,11 +260,11 @@ async def confirmation_handler(message: types.Message, state: FSMContext):
             if data['book_name'] not in users[user_id]["book"]:
                 users[user_id]["book"].append(data["book_name"])
             save_json(USERS_FILE, users)
+        await start_handler(message)
+
 
     else:
-        # Redirect to start handler
         await message.answer("No problem! Let's start again.")
-        await state.finish()
         await start_handler(message)
     
     await state.finish()
@@ -316,7 +310,7 @@ async def daily_statistics_handler(message: types.Message):
     users = load_json(USERS_FILE)
     stats = "\n".join([
     f'🧍 {users.get(user_id, {}).get("user_name", "Unknown User")}: '
-    f'{"Penalty (@" + users[user_id]["username"] + ") 5000 ❌"  if daily.get(user_id, {}).get("read_pages", 5000) == 5000 or daily.get(user_id, {}).get("read_pages", 0) < 11 else str(daily.get(user_id, {}).get("read_pages")) + " pages ✅"} \n'
+    f'{"Penalty (@" + users[user_id]["username"] + ") 5000 ❌"  if daily.get(user_id, {}).get("read_pages", 5000) == 5000 or daily.get(user_id, {}).get("read_pages", 0) < 10 else str(daily.get(user_id, {}).get("read_pages")) + " pages ✅"} \n'
     for user_id in users
 ])
     if stats:
@@ -371,6 +365,39 @@ async def user_statistics_handler(message: types.Message):
             await message.answer(chunk)
     else:
         await message.answer("No data available.")
+
+
+@dp.message_handler(lambda message: message.text == "Delete User" and message.from_user.id in ADMIN_IDS)
+async def delete_user(message: types.Message):
+    users = load_json(USERS_FILE)
+    if not users:
+        await message.reply("No users found in the database.")
+        return
+
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    for user_id, user_data in users.items():
+        button = InlineKeyboardButton(
+            text=user_data.get("user_name", "Unknown User"),
+            callback_data=f"delete_user:{user_id}"
+        )
+        keyboard.add(button)
+
+    await message.reply("Select a user to delete:", reply_markup=keyboard)
+
+@dp.callback_query_handler(lambda callback: callback.data.startswith("delete_user:"))
+async def confirm_deletion(callback: types.CallbackQuery):
+    user_id = callback.data.split(":")[1]
+    users = load_json(USERS_FILE)
+
+    if user_id in users:
+        deleted_user_name = users[user_id].get("user_name", "Unknown User")
+        del users[user_id]
+        save_json2(USERS_FILE, users)
+        await callback.message.edit_text(f"User '{deleted_user_name}' has been deleted successfully.")
+    else:
+        await callback.message.edit_text("User not found in the database.")
+
+
 
 
 async def on_start(dp):
