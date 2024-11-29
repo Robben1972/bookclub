@@ -41,6 +41,9 @@ class ReadingState(StatesGroup):
     finished = State()  
     confirmation = State()
 
+class UploadBook(StatesGroup):
+    book_name = State()
+
 
 def load_json(file):
     with open(file, "r") as f:
@@ -88,16 +91,15 @@ async def start_handler(message: types.Message):
             save_json(USERS_FILE, users)
         msg = "Welcome to the Book Club Bot!"
 
-    # Prepare keyboard
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-    keyboard.add(KeyboardButton("📚 Today Have Read")).add(KeyboardButton("Log Out 🚪"))
+    keyboard.add(KeyboardButton("📚 Today Have Read")).add(KeyboardButton("Log Out 🚪"), KeyboardButton("💻 E-library"))
 
     if message.from_user.id in ADMIN_IDS:
         keyboard.add(
             KeyboardButton("📅 Daily Statistics"),
             KeyboardButton("📈 Weekly Statistics"),
             KeyboardButton("👥 User Statistics"),
-            KeyboardButton("Delete User")
+            KeyboardButton("Delete User"), KeyboardButton("Upload book")
         )
 
     # Respond to the user
@@ -396,6 +398,10 @@ async def confirm_deletion(callback: types.CallbackQuery):
         await callback.message.edit_text(f"User '{deleted_user_name}' has been deleted successfully.")
     else:
         await callback.message.edit_text("User not found in the database.")
+
+@dp.message_handler(lambda message: message.text == "Upload book" and message.from_user.id in ADMIN_IDS)
+async def upload_book(message: types.Message):
+    pass
 
 
 
