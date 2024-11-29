@@ -40,14 +40,14 @@ async def clean_daily():
         if user_id in daily:
             pages = daily[user_id]["read_pages"]
             if user_id in weekly:
-                if pages >= 20:
+                if pages >= 10:
                     weekly[user_id]["read_pages"] += pages
                 else:
                     weekly[user_id]["penalty"] += 5000
             else:
                 weekly[user_id] = {
-                    "read_pages": pages if pages >= 20 else 0,
-                    "penalty": 5000 if pages < 20 else 0,
+                    "read_pages": pages if pages >= 10 else 0,
+                    "penalty": 5000 if pages < 10 else 0,
                     "username": user_data["username"],
                     "fullname": user_data["fullname"],
                     "user_name": user_data["user_name"],
@@ -66,7 +66,7 @@ async def clean_daily():
 
     stats = "\n".join([
     f'🧍 {users.get(user_id, {}).get("user_name", "Unknown User")}: '
-    f'{"Penalty (@" + users[user_id]["username"] + ") 5000 ❌"  if daily.get(user_id, {}).get("read_pages", 5000) == 5000 or daily.get(user_id, {}).get("read_pages", 0) < 20 else str(daily.get(user_id, {}).get("read_pages")) + " pages ✅"} \n'
+    f'{"Penalty (@" + users[user_id]["username"] + ") 5000 ❌"  if daily.get(user_id, {}).get("read_pages", 5000) == 5000 or daily.get(user_id, {}).get("read_pages", 0) < 10 else str(daily.get(user_id, {}).get("read_pages")) + " pages ✅"} \n'
     for user_id in users
 ])
 
@@ -105,7 +105,7 @@ async def main():
         if current_time.hour == 8 and current_time.minute == 55:
             await clean_daily()
 
-        if current_time.hour == 9 and current_time.minute == 0 and datetime.datetime.now().weekday() == 5:  # 5 is Saturday
+        if current_time.hour == 9 and current_time.minute == 0 and datetime.datetime.now().weekday() == 5:
             await clean_weekly()
 
 
