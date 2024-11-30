@@ -36,6 +36,7 @@ BOOKS_FILE=""
 
 ADMIN1=""
 ADMIN2=""
+ADMIN3=""
 ```
 
 Fill in the values for each field as per your requirements.
