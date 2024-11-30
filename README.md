@@ -58,6 +58,3 @@ Feel free to fork this repository and submit pull requests. For major changes, p
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-```
-
-You can add this to a file named `README.md` in your repository. Let me know if you need any more help!
