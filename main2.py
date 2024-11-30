@@ -25,7 +25,7 @@ WEEKLY_FILE = env('WEEKLY_FILE')
 LEFT_FILE = env('LEFT_FILE')
 BOOKS_FILE = env('BOOKS_FILE')
 
-ADMIN_IDS = [int(env('SHUHRAT')), int(env('SHAKHOB')) ,int(env("DILYA")) ]
+ADMIN_IDS = [int(env('ADMIN1')), int(env('ADMIN2')) ,int(env("ADMIN3")) ]
 
 
 def chunk_text(text, max_length=4096):
