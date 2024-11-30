@@ -46,7 +46,7 @@ Fill in the values for each field as per your requirements.
 To run the bot, use the following command:
 
 ```bash
-python main.py
+python main2.py
 ```
 
 Make sure to activate your virtual environment before running the bot.
