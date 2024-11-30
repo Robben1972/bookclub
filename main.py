@@ -3,14 +3,17 @@ import datetime
 import json
 
 from aiogram import Bot
+from environs import Env
+env = Env()
+env.read_env()
 
+TOKEN = env('TOKEN')
 
-TOKEN = "8046268758:AAGocfkvqWEB6APk-A2KIeAVHbBT_59QGN0"
+USERS_FILE = env('USERS_FILE')
+DAILY_FILE = env('DAILY_FILE')
+WEEKLY_FILE = env('WEEKLY_FILE')
+GROUP_ID = env('GROUP_ID')
 
-USERS_FILE = "users.json"
-DAILY_FILE = "daily.json"
-WEEKLY_FILE = "weekly.json"
-GROUP_ID = "-1002125753894"
 bot = Bot(token=TOKEN)
 
 

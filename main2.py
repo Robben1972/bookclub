@@ -7,18 +7,25 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from main import cleaners
+from environs import Env
 
-TOKEN = "8046268758:AAGocfkvqWEB6APk-A2KIeAVHbBT_59QGN0"
-GROUP_ID = "-4789467558"
+env = Env()
+env.read_env()
+
+TOKEN = env('TOKEN')
+GROUP_ID = env('GROUP_ID')
+
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
-USERS_FILE = "users.json"
-DAILY_FILE = "daily.json"
-WEEKLY_FILE = "weekly.json"
-LEFT_FILE = "left.json"
-ADMIN_IDS = [1178777189, 1274378031, 1872062029]
+USERS_FILE = env('USERS_FILE')
+DAILY_FILE = env('DAILY_FILE')
+WEEKLY_FILE = env('WEEKLY_FILE')
+LEFT_FILE = env('LEFT_FILE')
+BOOKS_FILE = env('BOOKS_FILE')
+
+ADMIN_IDS = [int(env('SHUHRAT')), int(env('SHAKHOB')) ,int(env("DILYA")) ]
 
 
 def chunk_text(text, max_length=4096):
@@ -44,6 +51,9 @@ class ReadingState(StatesGroup):
 class UploadBook(StatesGroup):
     book_name = State()
 
+class ReadBook(StatesGroup):
+    book_name = State()
+
 
 def load_json(file):
     with open(file, "r") as f:
@@ -61,6 +71,10 @@ def save_json2(filepath, data):
     with open(filepath, "w") as file:
         json.dump(data, file, indent=4)
 
+
+@dp.message_handler(commands=['test'])
+async def get_id(message: types.Message):
+    print(message.chat.id)
 @dp.message_handler(lambda message: str(message.chat.id) == GROUP_ID)
 async def ignore_group_messages(message: types.Message):
         return 
@@ -107,6 +121,11 @@ async def start_handler(message: types.Message):
 
 
 
+@dp.message_handler(lambda message: message.text == "⬅️ Back", state="*")
+async def back_handler(message: types.Message, state: FSMContext):
+    await start_handler(message)
+    await state.finish()
+
 @dp.message_handler(lambda message: message.text == "📚 Today Have Read")
 async def today_read_handler(message: types.Message):
     users = load_json(USERS_FILE)
@@ -116,7 +135,8 @@ async def today_read_handler(message: types.Message):
         await message.answer("🧑 Please provide your name:")
         await ReadingState.user_name.set()
     else:
-        await message.answer("💣 From Page:")
+        await message.answer("💣 From Page:", reply_markup=ReplyKeyboardMarkup(
+            resize_keyboard=True).add(KeyboardButton("⬅️ Back")))
         await ReadingState.from_page.set()
 
 
@@ -140,6 +160,7 @@ async def book_name_handler(message: types.Message, state: FSMContext):
         await message.answer("Please provide the name of the book you have read:", reply_markup=ReplyKeyboardRemove())
     else:
        await to_page_handler(message, state)
+
 
 @dp.message_handler(state=ReadingState.from_page)
 async def from_page_handler(message: types.Message, state: FSMContext):
@@ -400,8 +421,51 @@ async def confirm_deletion(callback: types.CallbackQuery):
         await callback.message.edit_text("User not found in the database.")
 
 @dp.message_handler(lambda message: message.text == "Upload book" and message.from_user.id in ADMIN_IDS)
-async def upload_book(message: types.Message):
-    pass
+async def upload_book(message: types.Message, state: FSMContext):
+    await message.answer('Please send the book (pls renemae the file before sending it because we automatically use the file name as a book name)', reply_markup=ReplyKeyboardMarkup(
+            resize_keyboard=True).add(KeyboardButton("⬅️ Back")))
+    await UploadBook.book_name.set()
+
+@dp.message_handler(content_types=['document'], state=UploadBook.book_name)
+async def book_name_handler(message: types.Message, state: FSMContext):
+    save_json(BOOKS_FILE, {message.document.file_name.split('.')[0]: message.document.file_id})
+    await state.finish()
+    await start_handler(message)
+
+@dp.message_handler(lambda message: message.text == "💻 E-library")
+async def book_library_handler(message: types.Message, state: FSMContext):
+    books = load_json(BOOKS_FILE)
+    if len(books) > 0:
+        keyboard = ReplyKeyboardMarkup(resize_keyboard=True)  # Ensure keyboard resizes properly
+        row = []
+        i = 0
+        for book_name in books.keys():
+            button = KeyboardButton(text=book_name)
+            row.append(button)
+            i += 1
+            if i == 2:  
+                keyboard.add(*row)
+                row = []
+                i = 0
+        if row:  
+            keyboard.add(*row)
+        keyboard.add('⬅️ Back')
+        await message.answer("Select a book to read:", reply_markup=keyboard)
+        await ReadBook.book_name.set()
+    else:
+        await message.answer("No books found in the library.")
+        await start_handler(message)
+
+@dp.message_handler(state=ReadBook.book_name)
+async def get_book(message: types.Message, state: FSMContext):
+    books = load_json(BOOKS_FILE)
+    if message.text in books:
+        book_id = books[message.text]
+        await message.answer_document(book_id)
+    else:
+        await message.answer("Book not found in the library.")
+    await state.finish()
+    await start_handler(message)
 
 
 
