@@ -105,10 +105,10 @@ async def clean_weekly():
 async def main():
         current_time = datetime.datetime.now().time()
 
-        if current_time.hour == 8 and current_time.minute == 55:
+        if current_time.hour == 19 and current_time.minute == 0:
             await clean_daily()
 
-        if current_time.hour == 9 and current_time.minute == 0 and datetime.datetime.now().weekday() == 5:
+        if current_time.hour == 4 and current_time.minute == 0 and datetime.datetime.now().weekday() == 5:
             await clean_weekly()
 
 
