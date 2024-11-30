@@ -268,7 +268,7 @@ async def confirmation_handler(message: types.Message, state: FSMContext):
             f"💣 Overall: {data['to_page'] - data['from_page']}\n"
             f"📅 {datetime.now().strftime('%d.%m.%Y')}\n"
             f"Finished: {data['finished']}\n"
-            f"📩 @Di_Baudelaire\n"
+            f"📩 @someone\n"
             f"#challange"
         )
         await bot.send_message(GROUP_ID, text)
